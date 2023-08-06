@@ -1,6 +1,8 @@
 package com.example.demo.model;
 
 import javax.persistence.*;
+
+import com.example.demo.model.enumtype.AccountRoleEnum;
 import lombok.*;
 
 import java.io.Serializable;
@@ -21,4 +23,7 @@ public class ThanhVien implements Serializable {
     private String tel;
     @Column(name = "ma_sinh_vien")
     private String maSinhVien;
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private AccountRoleEnum role;
 }

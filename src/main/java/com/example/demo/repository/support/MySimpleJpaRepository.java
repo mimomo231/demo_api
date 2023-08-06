@@ -6,10 +6,10 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import javax.persistence.EntityManager;
 import java.io.Serializable;
 import java.util.List;
-public class HieuSimpleJpaRepository<E, ID extends Serializable> extends SimpleJpaRepository<E, ID>
-        implements HieuJpaRepository {
+public class MySimpleJpaRepository<E, ID extends Serializable> extends SimpleJpaRepository<E, ID>
+        implements MyJpaRepository {
     private final EntityManager entityManager;
-    public HieuSimpleJpaRepository(JpaEntityInformation<E, ?> entityInformation, EntityManager entityManager) {
+    public MySimpleJpaRepository(JpaEntityInformation<E, ?> entityInformation, EntityManager entityManager) {
         super(entityInformation, entityManager);
         this.entityManager = entityManager;
     }

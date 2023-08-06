@@ -1,18 +1,11 @@
 package com.example.demo.repository;
 
 import com.example.demo.model.ThanhVien;
-import com.example.demo.repository.support.HieuJpaRepository;
-import com.example.demo.repository.support.QueryCallBack;
-import com.example.demo.response.BuoiHocDTO;
-import com.example.demo.response.SinhVienDTO;
+import com.example.demo.request.ResetPasswordRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 public interface UserRepository extends JpaRepository<ThanhVien, Integer>, UserRepoCustom  {

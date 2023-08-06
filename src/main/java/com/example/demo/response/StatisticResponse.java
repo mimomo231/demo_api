@@ -27,6 +27,7 @@ public class StatisticResponse {
         tk.put("Trung binh", Collections.frequency(types, "Trung binh"));
         tk.put("kha", Collections.frequency(types, "kha"));
         tk.put("gioi", Collections.frequency(types, "gioi"));
+        tk.put("Tong so", types.size());
     }
 
 }

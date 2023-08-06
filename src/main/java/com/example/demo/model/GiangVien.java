@@ -2,6 +2,7 @@ package com.example.demo.model;
 
 import javax.persistence.*;
 
+import com.example.demo.model.enumtype.AccountRoleEnum;
 import lombok.*;
 
 @Entity
@@ -18,4 +19,7 @@ public class GiangVien{
     private String password;
     private String email;
     private String tel;
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private AccountRoleEnum role;
 }

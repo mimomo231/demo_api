@@ -5,7 +5,7 @@ import org.springframework.data.repository.NoRepositoryBean;
 import java.util.List;
 
 @NoRepositoryBean
-public interface HieuJpaRepository {
+public interface MyJpaRepository {
     <T> List<T> findAll(QueryCallBack<List<T>> callback);
     <T> T findOne(QueryCallBack<T> callback);
 }

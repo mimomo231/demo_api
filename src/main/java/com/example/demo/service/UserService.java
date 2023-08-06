@@ -10,4 +10,5 @@ public interface UserService {
     ResponseEntity<?> updateUser(UpdateUserRequest request);
     ResponseEntity<?> deleteUser(Integer request);
     ResponseEntity<?> getListUserInClass(Integer id);
+    void resetPassword(ResetPasswordRequest request);
 }

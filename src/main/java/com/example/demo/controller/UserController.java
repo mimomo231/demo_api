@@ -20,25 +20,38 @@ public class UserController {
     ResponseEntity<?> login(@RequestBody @Valid LoginRequest request) {
         return userService.login(request);
     }
+
+    @PostMapping("/reset-password")
+    ResponseEntity<String> resetPassword(
+            @RequestBody @Valid ResetPasswordRequest request
+    ) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok("Reset password completed");
+    }
+
     @GetMapping("/ds/{lid}")
     ResponseEntity<?> getListUserInClass(@PathVariable Integer lid){
         return userService.getListUserInClass(lid);
     }
+
     @GetMapping
     ResponseEntity<?> searchUser(@RequestParam(name = "key")
                                  String key) {
         return ResponseEntity.ok(userService.searchUser(key));
     }
+
     @PostMapping
     ResponseEntity<?> addUser(
             @RequestBody @Valid AddUserRequest request
     ) {
         return ResponseEntity.ok(userService.addUser(request));
     }
+
     @PutMapping
     ResponseEntity<?> updateUser(@RequestBody @Valid UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(request));
     }
+
     @DeleteMapping("/{uid}")
     ResponseEntity<?> deleteUser(@PathVariable Integer uid) {
         return ResponseEntity.ok(userService.deleteUser(uid));
