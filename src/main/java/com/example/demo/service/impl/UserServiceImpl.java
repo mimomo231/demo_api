@@ -1,30 +1,44 @@
 package com.example.demo.service.impl;
 
 import com.example.demo.common.base.exception.NotFoundException;
+import com.example.demo.common.base.exception.TokenRefreshException;
 import com.example.demo.common.security.common.JwtTokenCommon;
+import com.example.demo.common.security.common.JwtUtils;
+import com.example.demo.common.security.model.DemoUserPassAuthenticationToken;
+import com.example.demo.common.security.model.TokenRefreshResponse;
 import com.example.demo.common.security.model.UserPrincipal;
 import com.example.demo.common.security.payload.UserToken;
 import com.example.demo.model.GiangVien;
+import com.example.demo.model.RefreshToken;
 import com.example.demo.model.ThanhVien;
+import com.example.demo.model.enumtype.AccountRoleEnum;
 import com.example.demo.repository.GiangVienRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.request.*;
 import com.example.demo.response.RegisterResponse;
+import com.example.demo.response.SinhVienDTO;
+import com.example.demo.service.RefreshTokenService;
 import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,13 +50,15 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenCommon jwtTokenCommon;
+    private final JwtUtils jwtUtils;
+    private final RefreshTokenService refreshTokenService;
     @Override
     public ResponseEntity<?> login(LoginRequest request) {
         // Authenticate via authentication manager
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
-        try{
+        try {
             ThanhVien sinhVien = userRepository.findByUsername(request.getUsername()).orElseThrow(
                     () ->new NotFoundException(String.format("error: not found username like that!"))
             );
@@ -50,20 +66,27 @@ public class UserServiceImpl implements UserService {
             if (Objects.nonNull(sinhVien) && Objects.nonNull(authentication)) {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
-                return ResponseEntity.ok(genTokenInfo(userDetails));
-            } else {
-                GiangVien giangVien = giangVienRepository.findByUsername(request.getUsername()).orElseThrow(
-                        () -> new NotFoundException(String.format("error: not found username like that"))
-                );
+                UserToken userToken = genTokenInfo(userDetails);
 
-                if (Objects.nonNull(giangVien) && Objects.nonNull(authentication)) {
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
-                    return ResponseEntity.ok(genTokenInfo(userDetails));
-                }
+                RefreshToken refreshToken = new RefreshToken();
+                refreshToken.setUser(sinhVien);
+                refreshToken.setExpiryDate(Instant.now().plusMillis(jwtUtils.getJwtExpirationMs()));
+                refreshToken.setToken(userToken.getRefreshToken());
+
+                refreshTokenService.saveRefreshToken(refreshToken);
+                return ResponseEntity.ok(userToken);
             }
-        }catch (Exception ex) {
-            System.out.println(ex.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getStackTrace());
+            GiangVien giangVien = giangVienRepository.findByUsername(request.getUsername()).orElseThrow(
+                    () -> new NotFoundException(String.format("error: not found username like that"))
+            );
+
+            if (Objects.nonNull(giangVien) && Objects.nonNull(authentication)) {
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
+                return ResponseEntity.ok(genTokenInfo(userDetails));
+            }
         }
         return null;
     }
@@ -108,9 +131,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<?> searchUser(String request) {
-        List<ThanhVien> thanhVienList = userRepository.findAll();
-        return ResponseEntity.ok(thanhVienList);
+    public ResponseEntity<?> searchUser(String key,int page, int size, String sortBy) {
+        Pageable paging = PageRequest.of(page, size, Sort.by(sortBy));
+        List<SinhVienDTO> sinhVienDTOList = userRepository.searchUser(key,page,size,sortBy);
+        Map<String, Object> response = new HashMap<>();
+        response.put("listSinhVien", sinhVienDTOList);
+        response.put("totalItems", sinhVienDTOList.size());
+//        response.put("totalPages", sinhVienDTOList.size()/size - 1);
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -129,12 +157,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<?> deleteUser(Integer uid) {
+        String rs = null;
         try {
             userRepository.deleteById(uid);
+            rs = new String("delete thanh cong");
         } catch (Exception e) {
-            return ResponseEntity.ok("Delete khong thanh cong");
+            rs = new String("delete khong thanh cong");
         }
-        return ResponseEntity.ok("Delete thanh cong");
+        return ResponseEntity.ok(rs);
     }
 
     @Override
@@ -152,16 +182,66 @@ public class UserServiceImpl implements UserService {
             if (Objects.nonNull(sinhVien)) {
                 sinhVien.setPassword(passwordEncoder.encode(request.getPassword()));
                 userRepository.save(sinhVien);
-            } else {
-                GiangVien giangVien = giangVienRepository.findByUsername(request.getUsername()).orElseThrow(
-                        () -> new NotFoundException(String.format("reset password error: not found username like that"))
-                );
-                if (Objects.nonNull(giangVien)) {
-                    giangVien.setPassword(passwordEncoder.encode(request.getPassword()));
-                    giangVienRepository.save(giangVien);
-                }
             }
-        }catch (NotFoundException e) {
+        } catch (Exception e) {
+            GiangVien giangVien = giangVienRepository.findByUsername(request.getUsername()).orElseThrow(
+                    () -> new NotFoundException(String.format("reset password error: not found username like that"))
+            );
+            if (Objects.nonNull(giangVien)) {
+                giangVien.setPassword(passwordEncoder.encode(request.getPassword()));
+                giangVienRepository.save(giangVien);
+            }
+        }
+    }
+
+    @Override
+    public ResponseEntity<?> refreshToken(TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+        try {
+            return refreshTokenService.findByToken(requestRefreshToken)
+                    .map(refreshTokenService::verifyExpiration)
+                    .map(RefreshToken::getUser)
+                    .map(user -> {
+                        String accessToken = jwtUtils.generateTokenFromUsername(user.getUsername());
+                        return ResponseEntity.ok(new TokenRefreshResponse(accessToken, requestRefreshToken));
+                    })
+                    .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
+                            "Refresh token is not in database!"));
+        } catch (Exception e) {
+            return new ResponseEntity<>("not found! please login",HttpStatus.NOT_FOUND);
+        }
+
+    }
+
+    @Override
+    public ResponseEntity<?> refreshToken1(TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        try {
+            return refreshTokenService.findByToken(requestRefreshToken)
+                    .map(refreshTokenService::verifyExpiration)
+                    .map(RefreshToken::getUser)
+                    .map(user -> {
+                        ThanhVien u = userRepository.findByUsername(user.getUsername()).get();
+                        List<String> roles = Arrays.asList(AccountRoleEnum.values()).stream()
+                                .filter(accountRoleEnum -> accountRoleEnum == u.getRole())
+                                .map(AccountRoleEnum::name)
+                                .collect(Collectors.toList());
+                        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                        roles.forEach(role -> authorities.add(new SimpleGrantedAuthority(role)));
+
+                        DemoUserPassAuthenticationToken authenticationToken =
+                                new DemoUserPassAuthenticationToken(user.getId().longValue(),
+                                        user.getUsername(),null, authorities);
+
+                        String accessToken = jwtTokenCommon.generateTokenFromUsername(user.getUsername(),
+                                user.getId().longValue(),authenticationToken.getAuthorities());
+                        return ResponseEntity.ok(new TokenRefreshResponse(accessToken, requestRefreshToken));
+                    })
+                    .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
+                            "Refresh token is not in database!"));
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.NOT_FOUND);
         }
     }
 }

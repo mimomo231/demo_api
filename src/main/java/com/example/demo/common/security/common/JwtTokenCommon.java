@@ -6,12 +6,9 @@ import com.example.demo.common.security.model.UserPrincipal;
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.stereotype.Component;
-
 import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
-
 
 public class JwtTokenCommon {
     @Value("${demo.app.jwtSecret}")
@@ -28,7 +25,7 @@ public class JwtTokenCommon {
     }
 
     public String generateJwtToken(UserPrincipal userPrincipal) {
-        return generateTokenFromUsername(userPrincipal.getUsername(),   userPrincipal.getId(), userPrincipal.getAuthorities());
+        return generateTokenFromUsername(userPrincipal.getUsername(), userPrincipal.getId(), userPrincipal.getAuthorities());
     }
 
     public String generateJwtRefreshToken(UserPrincipal userPrincipal) {
@@ -36,7 +33,7 @@ public class JwtTokenCommon {
     }
 
     public Algorithm algorithm() {
-        return Algorithm.HMAC256(jwtSecret.getBytes());
+        return Algorithm.HMAC256(jwtSecret);
     }
 
     public String generateTokenFromUsername(String username, Long userId, Collection<? extends GrantedAuthority> authorities) {

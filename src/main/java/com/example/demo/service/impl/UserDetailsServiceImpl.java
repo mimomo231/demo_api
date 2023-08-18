@@ -23,29 +23,32 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final GiangVienRepository giangVienRepository;
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        ThanhVien sinhVien = userRepository.findByUsername(username).orElseThrow(
-                () ->new NotFoundException(String.format("reset Password error: not found username like that!"))
-        );
-        if (Objects.nonNull(sinhVien)) {
-            return UserPrincipal.build(UserAccountInfo.builder()
-                    .userId(Long.valueOf(sinhVien.getId()))
-                    .username(sinhVien.getUsername())
-                    .password(sinhVien.getPassword())
-                    .roles(Collections.singletonList(sinhVien.getRole().name()))
-                    .tel(sinhVien.getTel())
-                    .studentCode(sinhVien.getMaSinhVien())
-                    .build());
-        } else {
+        try {
+            ThanhVien sinhVien = userRepository.findByUsername(username).orElseThrow(
+                    () ->new NotFoundException(String.format("error: not found username like that!"))
+            );
+            if (Objects.nonNull(sinhVien)) {
+                return UserPrincipal.build(UserAccountInfo.builder()
+                        .userId(Long.valueOf(sinhVien.getId()))
+                        .username(sinhVien.getUsername())
+                        .password(sinhVien.getPassword())
+                        .roles(Collections.singletonList(sinhVien.getRole().name()))
+                        .tel(sinhVien.getTel())
+                        .studentCode(sinhVien.getMaSinhVien())
+                        .build());
+            }
+        } catch (Exception e) {
             GiangVien giangVien = giangVienRepository.findByUsername(username).orElseThrow(
-                    () -> new NotFoundException(String.format("reset password error: not found username like that"))
+                    () -> new NotFoundException(String.format("error: not found username like that"))
             );
             return UserPrincipal.build(UserAccountInfo.builder()
-                    .userId(Long.valueOf(sinhVien.getId()))
+                    .userId(Long.valueOf(giangVien.getId()))
                     .username(giangVien.getUsername())
                     .password(giangVien.getPassword())
                     .roles(Collections.singletonList(giangVien.getRole().name()))
                     .tel(giangVien.getTel())
                     .build());
         }
+        return null;
     }
 }

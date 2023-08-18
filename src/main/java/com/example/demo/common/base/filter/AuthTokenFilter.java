@@ -6,11 +6,12 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.example.demo.common.security.model.DemoUserPassAuthenticationToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -29,19 +30,26 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Slf4j
 public class AuthTokenFilter extends OncePerRequestFilter {
 
-    @Value("studentManagementKey")
+    @Value("${demo.app.jwtSecret}")
     private String jwtSecret;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        if(request.getServletPath().equals("/api/user/login") || request.getServletPath().equals("/api/user/token/refresh")) {
+        if(request.getServletPath().equals("/api/user/login")) {
+            filterChain.doFilter(request, response);
+        } else if (request.getServletPath().equals("/api/user/refresh-token")) {
             filterChain.doFilter(request, response);
         } else {
             String token = parseJwt(request);
             if(StringUtils.hasText(token)) {
                 try {
-                    Algorithm algorithm = Algorithm.HMAC256(jwtSecret.getBytes());
+                    String[] jwtParts = token.split("\\.");
+                    String headerJson = new String(Base64.getDecoder().decode(jwtParts[0]));
+                    JsonObject header = JsonParser.parseString(headerJson).getAsJsonObject();
+                    String alg = header.get("alg").getAsString();
+
+                    Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
                     JWTVerifier verifier = JWT.require(algorithm).build();
                     DecodedJWT decodedJWT = verifier.verify(token);
 

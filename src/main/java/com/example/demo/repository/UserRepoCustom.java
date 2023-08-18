@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface UserRepoCustom {
     List<SinhVienDTO> findAllUserByClass(Integer lid);
+    List<SinhVienDTO> searchUser(String key,int page, int size, String sortBy);
 }

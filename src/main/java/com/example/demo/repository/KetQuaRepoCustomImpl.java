@@ -1,17 +1,23 @@
 package com.example.demo.repository;
 
+import com.example.demo.model.KetQua;
+import com.example.demo.request.EnterScoreRequest;
 import com.example.demo.response.ScoreStatistic;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class KetQuaRepoCustomImpl implements KetQuaRepoCustom{
+public class KetQuaRepoCustomImpl implements KetQuaRepoCustom {
     @PersistenceContext
     private EntityManager entityManager;
+
     @Override
     public List<ScoreStatistic> statisticScore() {
         StringBuilder sb = new StringBuilder();
@@ -25,6 +31,7 @@ public class KetQuaRepoCustomImpl implements KetQuaRepoCustom{
         Query query = entityManager.createNativeQuery(sb.toString());
         return mapTo(query.getResultList());
     }
+
     private List<ScoreStatistic> mapTo(List<Object[]> rlist) {
         return rlist.stream()
                 .map(r -> ScoreStatistic.builder()
@@ -35,4 +42,10 @@ public class KetQuaRepoCustomImpl implements KetQuaRepoCustom{
                         .build())
                 .collect(Collectors.toList());
     }
+//    <S, T> List<T> mapList(List<S> source, Class<T> target) {
+//        return source.stream()
+//                .map(element -> )
+//                .collect(Collectors.toList());
+//    }
+
 }
